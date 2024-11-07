@@ -62,7 +62,7 @@ PROC printSignedNumber
     ret
 ENDP printSignedNumber
 
-
+PUBLIC printUnsignedNumber
 PROC printUnsignedNumber
     ARG @@number:dword
     USES eax, ebx, ecx, edx
@@ -94,4 +94,32 @@ PROC printUnsignedNumber
     ret
 ENDP printUnsignedNumber
 
+PUBLIC printFloat
+PROC printFloat
+    ARG @@number:dword, @@scaleFactor:dword
+    USES eax, ebx, ecx, edx
+
+    mov eax, [@@number] ; eax holds input integer
+    mov ebx, 10         ; divider
+    xor ecx, ecx        ; reset counter for digits to be printed (used by loop)
+
+    fld [dword ptr @@number]  ; Load float number into FPU stack (ST(0))
+    
+    fmul dword ptr @@scaleFactor ; Multiply the float number by the scale factor
+    
+    frndint                     ; Round float number to nearest integer
+    fistp dword ptr @@number  ; Store integer part into number, popping FPU stack
+
+    call printSignedNumber, [@@number]
+    
+    mov ah, 2h          ; Print '.' for the decimal point
+    mov dl, 'r'         ; dl stores the character to print
+    int 21h             ; inerupt for printing a character
+
+    ;this 3 is because the scale factor is 1000.0
+    mov dl, '3'         ; dl stores the character to print
+    int 21h             ; inerupt for printing a character
+    ret
+
+ENDP printFloat
 END 

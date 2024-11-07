@@ -22,8 +22,8 @@ PROC main
     sti  ; Set the interrupt flag => enable interrupts.
     cld  ; Clear the direction flag => auto-increment source
          ; and destination indices.
-    EXTRN printSignedNumber:PROC
-    call printSignedNumber, [number]
+    EXTRN printFloat:PROC
+    call printFloat, [number], [scale]
     
     mov ah,0h		; wait for keystroke
     int 16h
@@ -37,7 +37,9 @@ ENDP main
 ; DATA
 ; -------------------------------------------------------------------
 DATASEG
-    number dd -106789987
+    number dd -10678.4569
+    ;must be a float
+    scale dd 1000.0
     
 
 ; -------------------------------------------------------------------
