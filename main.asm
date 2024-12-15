@@ -54,11 +54,11 @@ PROC main
     ;call printNewline
 
     ; Set video mode 13h
-    ;mov AX, 13h
-    ;int 10h
+    mov AX, 13h
+    int 10h
 
     ; Set start of video memory
-    ;mov EDI, VMEMADR
+    mov EDI, VMEMADR
 
     ; Set up ESI for array iteration
     mov ecx, [array_length]     ; Number of coordinates (pairs of x and y)
@@ -67,7 +67,7 @@ PROC main
     ;call drawPixel, [dword ptr esi], [dword ptr esi + 4], LIGHT_CYAN
     ;call drawPixel, [dword ptr esi], [dword ptr esi + 4], LIGHT_CYAN
 
-    call drawLine, [dword ptr esi], [dword ptr esi + 4], [dword ptr esi + 8], [dword ptr esi + 12], LIGHT_RED
+    call drawLine, [dword ptr esi], [dword ptr esi + 4], [dword ptr esi + 8], [dword ptr esi + 12]
 
 
     
@@ -93,13 +93,14 @@ DATASEG
     ;must be a float
     scale dd 1000.0
     array_length dd 2
-    array dd 10.0, 10.0, 20.0, 30.0
+    array dd 10, 10, 20, 20
     x_val dd ?
+    epsilon dd 0.0001
     
 
 ; -------------------------------------------------------------------
 ; STACK
 ; -------------------------------------------------------------------
-STACK 100h
+STACK 200h
 
 END main

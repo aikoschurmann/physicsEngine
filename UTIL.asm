@@ -182,138 +182,90 @@ PROC printString
     ret
 ENDP printString
 
-
+; why the hell is this not working
 PUBLIC drawLine
 PROC drawLine
-    ; 10 10 20 20
-    ARG @@x1:dword, @@y1:dword, @@x2:dword, @@y2:dword, @@color:byte, @@epsilon:dword
-    LOCAL @@dx:dword, @@dy:dword, @@sx:dword, @@sy:dword, @@err:dword, @@e2:dword
-    USES eax, ebx, ecx, edx, edi
+    ARG @@x1:dword, @@y1:dword, @@x2:dword, @@y2:dword
+    LOCAL @@dx:dword, @@dy:dword, @@sx:dword, @@sy:dword, @@err:dword, @@err2:dword
+    USES eax, ebx, ecx, edx
 
-    ; Print initial newline
-    call printNewline
+    ;dx = abs(x2 - x1)
+    ;dy = abs(y2 - y1)
+    ;sx = sign(x2 - x1)  // Step in x direction
+    ;sy = sign(y2 - y1)  // Step in y direction
+    ;err = dx - dy  // Error term
 
-    ; Print x1 and y1
-    call printString, offset string_x1_y1
-    call printNewline
-    call printFloat, [@@x1], [scale]
-    call printNewline
-    call printFloat, [@@y1], [scale]
-    call printNewline
+    mov eax, [@@x2]     ; Load x2 coordinate
+    sub eax, [@@x1]     ; Subtract x1 from x2
+    test eax, eax       ; Check for sign
+    jns @@skipSignX2    ; If the sign is not set, skip the '-' sign.
+    neg eax             ; negate eax
+@@skipSignX2:
+    mov @@dx, eax       ; Store dx
 
-    ; Print x2 and y2
-    call printString, offset string_x2_y2
-    call printNewline
-    call printFloat, [@@x2], [scale]
-    call printNewline
-    call printFloat, [@@y2], [scale]
-    call printNewline
+    mov eax, [@@y2]     ; Load y2 coordinate
+    sub eax, [@@y1]     ; Subtract y1 from y2
+    test eax, eax       ; Check for sign
+    jns @@skipSignY2    ; If the sign is not set, skip the '-' sign.
+    neg eax             ; negate eax
+@@skipSignY2:
+    mov @@dy, eax       ; Store dy
 
-    ; dx = abs(x2 - x1) (floats)
-    fld [dword ptr @@x2]             ; Load x2 into FPU stack
-    fsub [dword ptr @@x1]            ; Subtract x1 from x2
-    fabs                             ; Get absolute value
-    fstp [dword ptr @@dx]            ; Store dx as float
+    mov eax, [@@x2]     ; Load x2 coordinate
+    sub eax, [@@x1]     ; Subtract x1 from x2
+    test eax, eax
+    jns @@sx_sign       ; If the sign is not set, skip the '-' sign.
+    mov @@sx, 1         ; Set sx to -1
+    jmp @@endSx
 
-    ; dy = abs(y2 - y1) (floats)
-    fld [dword ptr @@y2]             ; Load y2 into FPU stack
-    fsub [dword ptr @@y1]            ; Subtract y1 from y2
-    fabs                             ; Get absolute value
-    fstp [dword ptr @@dy]            ; Store dy as float
+@@sx_sign:
+    mov @@sx, 1        ; Set sx to -1
+    jmp @@endSx
 
-    ; Calculate sx = sign(x2 - x1)
-    fld [dword ptr @@x1]             ; Load x1 into FPU stack
-    fcom [dword ptr @@x2]            ; Compare x1 and x2
-    fstsw ax                         ; Store FPU status word in AX
-    sahf                             ; Store AH in flags (affecting the CPU flags)
-    jae @@skipSx                     ; If x1 >= x2, skip the next instruction (sx = -1)
-    mov [@@sx], 1                    ; Set sx to 1 (x1 < x2)
-    jmp @@doneSx
-@@skipSx:
-    mov [@@sx], -1                   ; Set sx to -1 (x1 >= x2)
-@@doneSx:
-
-    ; Calculate sy = sign(y2 - y1)
-    fld [dword ptr @@y1]             ; Load y1 into FPU stack
-    fcom [dword ptr @@y2]            ; Compare y1 and y2
-    fstsw ax                         ; Store FPU status word in AX
-    sahf                             ; Store AH in flags (affecting the CPU flags)
-    jae @@skipSy                     ; If y1 >= y2, skip the next instruction (sy = -1)
-    mov [@@sy], 1                    ; Set sy to 1 (y1 < y2)
-    jmp @@doneSy
-@@skipSy:
-    mov [@@sy], -1                   ; Set sy to -1 (y1 >= y2)
-@@doneSy:
-
-    ; err = dx - dy  // Error term
-    fld [dword ptr @@dx]             ; Load dx into FPU stack
-    fsub [dword ptr @@dy]            ; Subtract dy from dx
-    fstp [dword ptr @@err]           ; Store err as float
-
-    ;initialize loop variables
-    mov eax, [@@x1]                  ; set current x into EAX
-    mov ebx, [@@y1]                  ; set current y into EBX
-
-@@loopStart:
-    ; Draw pixel at (x, y)
-    call drawPixel, eax, ebx, @@color
+@@endSx
     
-    ;if abs(x1 - x2) < epsilon and abs(y1 - y2) < epsilon: break
-    fld [dword ptr @@x2]             ; Load x2 into FPU stack
-    fsub [dword ptr @@x1]            ; Subtract x1 from x2
-    fabs                             ; Get absolute value
-    fcom [dword ptr @@epsilon]       ; Compare with epsilon
-    fstsw ax                         ; Store FPU status word in AX
-    sahf                             ; Store AH in flags (affecting the CPU flags)
-    jae @@skipEpsilon                 ; If abs(x1 - x2) >= epsilon, skip the next instruction
-    fld [dword ptr @@y2]             ; Load y2 into FPU stack
-    fsub [dword ptr @@y1]            ; Subtract y1 from y2
-    fabs                             ; Get absolute value
-    fcom [dword ptr @@epsilon]       ; Compare with epsilon
-    fstsw ax                         ; Store FPU status word in AX
-    sahf                             ; Store AH in flags (affecting the CPU flags)
-    jae @@skipEpsilon                 ; If abs(y1 - y2) >= epsilon, skip the next instruction
-    jmp @@breakLoop                  ; Break the loop
+        mov eax, [@@y2]     ; Load y2 coordinate
+        sub eax, [@@y1]     ; Subtract y1 from y2
+        test eax, eax
+        jns @@sy_sign       ; If the sign is not set, skip the '-' sign.
+        mov @@sy, 1         ; Set sy to -1
+        jmp @@endSy
 
-@@skipEpsilon:
-    ; e2 = 2 * err
-    fld [dword ptr @@err]            ; Load err into FPU stack
-    fadd [dword ptr @@err]           ; Add err to err
-    fstp [dword ptr @@e2]            ; Store e2 as float
+@@sy_sign:
+    mov @@sy, 1        ; Set sy to -1
+    jmp @@endSy
 
-    ; if e2 > -dy: err -= dy, x += sx
-    fld [dword ptr @@e2]             ; Load e2 into FPU stack
-    fcom [dword ptr @@dy]            ; Compare with -dy
-    fstsw ax                         ; Store FPU status word in AX
-    sahf                             ; Store AH in flags (affecting the CPU flags)
-    jg @@skipErrDy                   ; If e2 <= -dy, skip the next instruction
-    
+@@endSy:
+    mov eax, @@dx       ; Load dx
+    sub eax, @@dy       ; Subtract dy from dx
+    mov @@err, eax      ; Store err
 
-    
-    
+@@loop_draw
+    call drawPixel, [dword ptr @@x1], [dword ptr @@y1], 15
 
+    mov eax, @@x1       ; Load x1
+    cmp eax, [@@x2]     ; Compare x1 with x2
+    jne @@continue      ; If x1 does not equal x2, continue loop
+    mov eax, @@y1       ; Load y1
+    cmp eax, [@@y2]     ; Compare y1 with y2
+    je @@endLoop        ; If y1 equals y2, end loop
 
+@@continue 
+    mov eax, @@err      ; Load err
+    shl eax, 1          ; Multiply err by 2
+    mov @err2, eax      ; Store err2
+
+    mov eax, @@err2     ; Load err2
+    cmp eax, @@dy       ; Compare err2 with dy
 
 
-    ; Print dx, dy, sx, sy, and err values
-    call printString, offset string_dx
-    call printFloat, [@@dx], [scale]
-    call printNewline
-    call printString, offset string_dy
-    call printFloat, [@@dy], [scale]
-    call printNewline
-    call printString, offset string_sx
-    call printSignedNumber, [@@sx], [scale]
-    call printNewline
-    call printString, offset string_sy
-    call printSignedNumber, [@@sy], [scale]
-    call printNewline
-    call printString, offset string_err
-    call printFloat, [@@err], [scale]
-    call printNewline
 
+@@endLoop:
     ret
 ENDP drawLine
+
+
+
 
 DATASEG
     ; Scale factor for float-to-integer conversion
